@@ -19,6 +19,10 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
+
 
 @SuppressWarnings("serial")
 public class LionRay extends JFrame {
@@ -27,11 +31,48 @@ public class LionRay extends JFrame {
 
 	public static void main(String[] args) throws Exception {
 		if (args.length > 0) { // called with params, CLI assumed
-			String inputPath = args[0];
-			String outputPath = args.length > 1 ? args[1] : (inputPath + ".dfpwm");
+			String inputPath = null;
+			String outputPath = null;
+			int sampleRate = 48000;
+			boolean newCodec = true;
+
+			// List<String> lst = Arrays.asList(args);
+			List<String> lst = new ArrayList<String>(Arrays.asList(args));
 
 			try {
-				convert(inputPath, outputPath, true);
+				if (lst.get(0).equals("-r") && lst.size() > 1) {
+					lst.remove(0);	// pop "-r"
+					sampleRate = Integer.parseInt(lst.remove(0));  // pop and parse rate
+				}
+
+				if (lst.get(0).equals("-o")) {
+					lst.remove(0);
+					newCodec = false;
+				}
+
+				if (lst.size() == 1) {
+					inputPath = lst.remove(0);
+					outputPath = inputPath + ".dfpwm";
+				}
+
+				if (lst.size() == 2) {
+					inputPath = lst.remove(0);
+					outputPath = lst.remove(0);
+				}
+
+			} catch (Exception e) {
+				System.err.println("Error while parsing arguments");
+				e.printStackTrace();
+				return;
+			}
+
+			if (inputPath == null || outputPath == null) {
+				System.err.println("Not enough arguments: input file required");
+				return;
+			}
+
+			try {
+				convert(inputPath, outputPath, sampleRate, newCodec);
 			} catch (UnsupportedAudioFileException e) {
 				System.err.println("Audio format unsupported");
 				return;
@@ -53,7 +94,7 @@ public class LionRay extends JFrame {
 		}
 	}
 
-	public static void convert(String inputFilename, String outputFilename, boolean dfpwmNew) throws UnsupportedAudioFileException, IOException {
+	public static void convert(String inputFilename, String outputFilename, int sampleRate, boolean dfpwmNew) throws UnsupportedAudioFileException, IOException {
 		AudioFormat convertFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, sampleRate, 8, 1, 1, sampleRate, false);
 		AudioInputStream unconverted = AudioSystem.getAudioInputStream(new File(inputFilename));
 		AudioInputStream inFile = AudioSystem.getAudioInputStream(convertFormat, unconverted);
@@ -263,7 +304,7 @@ class convertListener implements ActionListener {
 			JOptionPane.showMessageDialog(null, "Output file is a directory");
 		else {
 			try {
-				LionRay.convert(LionRay.textInputFile.getText(), LionRay.textOutputFile.getText(), LionRay.dfpwmNew.isSelected());
+				LionRay.convert(LionRay.textInputFile.getText(), LionRay.textOutputFile.getText(), LionRay.sampleRate, LionRay.dfpwmNew.isSelected());
 			} catch (UnsupportedAudioFileException e1) {
 				JOptionPane.showMessageDialog(null, "Audio format unsupported");
 				return;
